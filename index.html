@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hiki x IriAsuna</title>
+  <title>桜の約束 — Sakura no Yakusoku</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -67,14 +67,15 @@
     </div>
 
     <div class="hero-content">
-      <h1 class="hero-title" id="heroTitle">Hiki x IriAsuna</h1>
+      <div class="hero-japanese" id="heroJapanese">桜の約束</div>
+      <h1 class="hero-title" id="heroTitle">Sakura no Yakusoku</h1>
       <p class="hero-subtitle" id="heroSubtitle">A Promise Beneath the Cherry Blossoms</p>
       <div class="hero-quote">
         <span class="quote-mark">"</span>
         <span id="heroQuote">In a world where cherry blossoms fall like forgotten memories,<br>two hearts find their way back to each other.</span>
         <span class="quote-mark">"</span>
       </div>
-      <p class="hero-author">Written by <strong id="heroAuthor">Aozora Hikari</strong></p>
+      <p class="hero-author">Written by <strong id="heroAuthor">Hiki</strong></p>
       <button class="start-reading-btn" id="startReading">
         <span>Begin Reading</span>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -105,27 +106,7 @@
       <div class="spinner-petal"></div>
       <div class="spinner-petal"></div>
     </div>
-    <p class="loading-text">Loading story from <span id="loadingFileName">novel.htm</span>...</p>
-  </section>
-
-  <!-- ====== ERROR STATE ====== -->
-  <section class="error-section" id="errorSection" style="display:none;">
-    <div class="error-icon">🌸</div>
-    <h2 class="error-title">Could not load the story</h2>
-    <p class="error-message" id="errorMessage">Make sure the novel file is in the same folder.</p>
-    <div class="error-help">
-      <p><strong>How to use:</strong></p>
-      <ol>
-        <li>Open your novel in Microsoft Word</li>
-        <li>File → Save As → Web Page (.htm)</li>
-        <li>Name it <code>novel.htm</code></li>
-        <li>Place it in the same folder as this website</li>
-        <li>Refresh this page</li>
-      </ol>
-    </div>
-    <button class="start-reading-btn" onclick="location.reload()">
-      <span>Try Again</span>
-    </button>
+    <p class="loading-text">Loading story...</p>
   </section>
 
   <!-- ====== STORY SECTION ====== -->
@@ -141,8 +122,21 @@
     </div>
 
     <article class="story-content" id="storyContent">
-      <!-- Content will be dynamically loaded from novel.htm -->
+      <!-- Content loaded from novel.htm -->
     </article>
+
+    <!-- ====== ENDING BANNER ====== -->
+    <div class="ending-banner" id="endingBanner">
+      <div class="ending-ornament">🌸</div>
+      <p class="ending-note">
+        Ending dari cerita ini <strong>tidak Cannon</strong>. Jika kamu tidak puas dengan ending cerita yang ini, silahkan baca <em>True Ending</em> dari cerita ini.
+      </p>
+      <button class="true-ending-btn" id="trueEndingBtn">
+        <span class="btn-sparkle">✦</span>
+        Read True Ending
+        <span class="btn-sparkle">✦</span>
+      </button>
+    </div>
 
     <div class="story-end-ornament">
       <svg viewBox="0 0 200 30" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -154,13 +148,47 @@
     </div>
   </section>
 
+  <!-- ====== TRUE ENDING SECTION ====== -->
+  <section class="true-ending-section" id="trueEndingSection" style="display:none;">
+    <div class="true-ending-header">
+      <div class="true-ending-ornament">🌸</div>
+      <div class="true-ending-badge">TRUE ENDING</div>
+      <h2 class="true-ending-title">The Real Promise</h2>
+      <p class="true-ending-subtitle">This is how the story truly ends.</p>
+      <div class="true-ending-divider">✿ ✿ ✿</div>
+    </div>
+
+    <article class="story-content" id="trueEndingContent">
+      <!-- True ending loaded from novel.htm -->
+    </article>
+
+    <div class="true-ending-final">
+      <div class="final-ornament">✿</div>
+      <p class="final-text">— True End —</p>
+      <p class="final-credit">Story by <strong>Hiki</strong></p>
+    </div>
+  </section>
+
+  <!-- ====== CONFIRMATION MODAL ====== -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+      <div class="modal-icon">🌸</div>
+      <h3 class="modal-title">Apakah anda yakin ingin membaca True Ending?</h3>
+      <p class="modal-subtitle">Cerita yang sebenarnya mungkin berbeda dari yang kamu harapkan...</p>
+      <div class="modal-buttons">
+        <button class="modal-btn modal-btn-yes" id="modalYes">Yes, I'm Ready</button>
+        <button class="modal-btn modal-btn-no" id="modalNo">No, Go Back</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ====== FOOTER ====== -->
   <footer class="footer" id="footer">
     <div class="footer-content">
       <div class="footer-ornament">🌸</div>
       <div class="footer-author">
         <h3>About the Author</h3>
-        <p id="footerBio"><strong>Aozora Hikari</strong> is a fiction writer inspired by the beauty of fleeting moments, cherry blossom seasons, and the quiet spaces between words where love lives.</p>
+        <p id="footerBio"><strong>Hiki</strong> is a storyteller who believes that the most beautiful stories are the ones that make your heart ache — and that every ending, no matter how painful, carries a promise of something new.</p>
       </div>
       <div class="footer-links">
         <a href="#" class="footer-link">𝕏 Twitter</a>
@@ -170,12 +198,13 @@
         <a href="#" class="footer-link">🌐 Website</a>
       </div>
       <div class="footer-copy">
-        <p>© 2025 — All rights reserved.</p>
+        <p>© 2025 Hiki — All rights reserved.</p>
         <p class="footer-made">Made with 🌸 and quiet longing</p>
       </div>
     </div>
   </footer>
 
   <script src="script.js"></script>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
