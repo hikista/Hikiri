@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hiki x IriAsuna</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- Sakura Petals -->
+  <div class="sakura-container" id="sakuraContainer"></div>
+
+  <!-- Ambient Orbs -->
+  <div class="ambient-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Noise Overlay -->
+  <div class="noise-overlay"></div>
+
+  <!-- Floating Controls -->
+  <div class="floating-controls" id="floatingControls">
+    <button class="control-btn" id="themeToggle" title="Toggle Theme">
+      <span class="icon-dark">🌙</span>
+      <span class="icon-light">☀️</span>
+    </button>
+    <button class="control-btn" id="fontSizeBtn" title="Font Size">Aa</button>
+    <button class="control-btn" id="focusBtn" title="Focus Mode">👁️</button>
+  </div>
+
+  <!-- Font Size Panel -->
+  <div class="font-panel" id="fontPanel">
+    <div class="font-panel-header">Reading Settings</div>
+    <div class="font-panel-row">
+      <span class="font-label">Font Size</span>
+      <div class="font-controls">
+        <button class="font-btn" id="fontDecrease">A−</button>
+        <span class="font-value" id="fontValue">18px</span>
+        <button class="font-btn" id="fontIncrease">A+</button>
+      </div>
+    </div>
+    <div class="font-panel-row">
+      <input type="range" id="fontSlider" min="14" max="28" value="18" class="font-slider">
+    </div>
+  </div>
+
+  <!-- Back to Top -->
+  <button class="back-to-top" id="backToTop" title="Back to Top">↑</button>
+
+  <!-- ====== HERO SECTION ====== -->
+  <section class="hero" id="hero">
+    <div class="hero-ornament-top">
+      <svg viewBox="0 0 200 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 20 Q50 0 100 20 Q150 40 200 20" stroke="currentColor" stroke-width="1" fill="none" opacity="0.3"/>
+        <circle cx="100" cy="20" r="3" fill="currentColor" opacity="0.4"/>
+        <circle cx="60" cy="12" r="2" fill="currentColor" opacity="0.3"/>
+        <circle cx="140" cy="28" r="2" fill="currentColor" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <div class="hero-content">
+      <h1 class="hero-title" id="heroTitle">Hiki x IriAsuna</h1>
+      <p class="hero-subtitle" id="heroSubtitle">A Promise Beneath the Cherry Blossoms</p>
+      <div class="hero-quote">
+        <span class="quote-mark">"</span>
+        <span id="heroQuote">In a world where cherry blossoms fall like forgotten memories,<br>two hearts find their way back to each other.</span>
+        <span class="quote-mark">"</span>
+      </div>
+      <p class="hero-author">Written by <strong id="heroAuthor">Aozora Hikari</strong></p>
+      <button class="start-reading-btn" id="startReading">
+        <span>Begin Reading</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3L8 13M8 13L13 8M8 13L3 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="scroll-hint" id="scrollHint">
+      <div class="mouse"><div class="mouse-wheel"></div></div>
+      <span>Scroll to begin</span>
+    </div>
+
+    <div class="hero-ornament-bottom">
+      <svg viewBox="0 0 200 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 20 Q50 40 100 20 Q150 0 200 20" stroke="currentColor" stroke-width="1" fill="none" opacity="0.3"/>
+        <circle cx="100" cy="20" r="3" fill="currentColor" opacity="0.4"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ====== LOADING INDICATOR ====== -->
+  <section class="loading-section" id="loadingSection">
+    <div class="loading-spinner">
+      <div class="spinner-petal"></div>
+      <div class="spinner-petal"></div>
+      <div class="spinner-petal"></div>
+      <div class="spinner-petal"></div>
+      <div class="spinner-petal"></div>
+    </div>
+    <p class="loading-text">Loading story from <span id="loadingFileName">novel.htm</span>...</p>
+  </section>
+
+  <!-- ====== ERROR STATE ====== -->
+  <section class="error-section" id="errorSection" style="display:none;">
+    <div class="error-icon">🌸</div>
+    <h2 class="error-title">Could not load the story</h2>
+    <p class="error-message" id="errorMessage">Make sure the novel file is in the same folder.</p>
+    <div class="error-help">
+      <p><strong>How to use:</strong></p>
+      <ol>
+        <li>Open your novel in Microsoft Word</li>
+        <li>File → Save As → Web Page (.htm)</li>
+        <li>Name it <code>novel.htm</code></li>
+        <li>Place it in the same folder as this website</li>
+        <li>Refresh this page</li>
+      </ol>
+    </div>
+    <button class="start-reading-btn" onclick="location.reload()">
+      <span>Try Again</span>
+    </button>
+  </section>
+
+  <!-- ====== STORY SECTION ====== -->
+  <section class="story-section" id="storySection" style="display:none;">
+    <div class="story-header">
+      <div class="story-ornament">❀</div>
+      <h2 class="chapter-label">— The Story —</h2>
+      <div class="story-stats" id="storyStats">
+        <span id="statWords">📖 Loading...</span>
+        <span>✦</span>
+        <span id="statGenre">🌸 Romance</span>
+      </div>
+    </div>
+
+    <article class="story-content" id="storyContent">
+      <!-- Content will be dynamically loaded from novel.htm -->
+    </article>
+
+    <div class="story-end-ornament">
+      <svg viewBox="0 0 200 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 15 Q60 0 100 15 Q140 30 180 15" stroke="currentColor" stroke-width="1" fill="none" opacity="0.3"/>
+        <circle cx="100" cy="15" r="4" fill="currentColor" opacity="0.3"/>
+        <circle cx="20" cy="15" r="2" fill="currentColor" opacity="0.2"/>
+        <circle cx="180" cy="15" r="2" fill="currentColor" opacity="0.2"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ====== FOOTER ====== -->
+  <footer class="footer" id="footer">
+    <div class="footer-content">
+      <div class="footer-ornament">🌸</div>
+      <div class="footer-author">
+        <h3>About the Author</h3>
+        <p id="footerBio"><strong>Aozora Hikari</strong> is a fiction writer inspired by the beauty of fleeting moments, cherry blossom seasons, and the quiet spaces between words where love lives.</p>
+      </div>
+      <div class="footer-links">
+        <a href="#" class="footer-link">𝕏 Twitter</a>
+        <span class="footer-dot">·</span>
+        <a href="#" class="footer-link">📷 Instagram</a>
+        <span class="footer-dot">·</span>
+        <a href="#" class="footer-link">🌐 Website</a>
+      </div>
+      <div class="footer-copy">
+        <p>© 2025 — All rights reserved.</p>
+        <p class="footer-made">Made with 🌸 and quiet longing</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
