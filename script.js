@@ -12,6 +12,7 @@
      CONFIGURATION — Change this to your file!
      ========================================== */
   const NOVEL_FILE = 'novel.htm';
+  const TRUE_ENDING_FILE = 'true-ending.htm'; // File terpisah untuk True Ending
 
   document.addEventListener('DOMContentLoaded', () => {
 
@@ -40,6 +41,7 @@
     const trueEndingSection = document.getElementById('trueEndingSection');
     const trueEndingContent = document.getElementById('trueEndingContent');
     const endingBanner = document.getElementById('endingBanner');
+    const footer = document.getElementById('footer'); // Untuk disembunyikan saat true ending
 
     // === State ===
     let currentFontSize = parseInt(localStorage.getItem('novelFontSize')) || 18;
@@ -67,7 +69,7 @@
         if (!response.ok) throw new Error('File not found');
 
         const html = await response.text();
-        const parsed = parseWordHTML(html);
+        const parsed = parseWordHTML(html); // Hanya ambil main story
 
         // Update hero with extracted metadata
         if (parsed.title) {
@@ -85,22 +87,17 @@
         }
 
         // Render main story
-        renderStory(parsed.mainStory, storyContent);
+        renderStory(parsed.paragraphs, storyContent);
 
-        // Render true ending if it exists
-        if (parsed.trueEnding.length > 0) {
-          renderStory(parsed.trueEnding, trueEndingContent);
-          endingBanner.style.display = 'block';
-        } else {
-          endingBanner.style.display = 'none';
-        }
-
-        // Calculate stats (main story only)
-        const allText = parsed.mainStory.map(p => p.text).join(' ');
+        // Hitung statistik
+        const allText = parsed.paragraphs.map(p => p.text).join(' ');
         const wordCount = allText.split(/\s+/).filter(w => w.length > 0).length;
         const readingTime = Math.max(1, Math.ceil(wordCount / 200));
         document.getElementById('statWords').textContent =
           `📖 ~${readingTime} min read · ${wordCount.toLocaleString()} words`;
+
+        // Tampilkan banner True Ending (selalu ada karena file terpisah)
+        endingBanner.style.display = 'block';
 
         // Show story, hide loading
         loadingSection.style.display = 'none';
@@ -111,7 +108,6 @@
 
       } catch (err) {
         console.error('Failed to load novel:', err);
-        // Just hide loading and show story section with a simple message
         loadingSection.style.display = 'none';
         storySection.style.display = 'block';
         storyContent.innerHTML = '<p class="visible" style="text-align:center;color:var(--text-muted);font-style:italic;">Place your novel.htm file in the same folder to begin reading.</p>';
@@ -120,8 +116,7 @@
     }
 
     /* ==========================================
-       PARSE WORD HTML
-       Splits into main story + true ending
+       PARSE WORD HTML (Hanya untuk main story)
        ========================================== */
     function parseWordHTML(html) {
       const parser = new DOMParser();
@@ -131,11 +126,8 @@
       let subtitle = '';
       let author = '';
       let genre = '';
-      const mainStory = [];
-      const trueEnding = [];
-      let isTrueEnding = false;
+      const paragraphs = [];
       let isFirstParagraph = true;
-      let isFirstTrueEndingParagraph = true;
 
       // --- Extract Title ---
       const titleEl = doc.querySelector('.MsoTitle, h1');
@@ -180,22 +172,9 @@
           return;
         }
 
-        // Detect TRUE ENDING marker
-        if (/true\s*ending/i.test(text) && (
-          el.tagName.match(/^H[1-6]$/) ||
-          text.length < 40
-        )) {
-          isTrueEnding = true;
-          return;
-        }
-
-        // Detect "The End" marker (for main story end)
+        // Detect "The End" marker
         if (/^[\—\-–—\s]*(The End|Tamat|Fin|End|Selesai|おわり|終)[\—\-–—\s]*$/i.test(text)) {
-          if (!isTrueEnding) {
-            mainStory.push({ type: 'story-end', text: text });
-          } else {
-            trueEnding.push({ type: 'story-end', text: text });
-          }
+          paragraphs.push({ type: 'story-end', text: text });
           return;
         }
 
@@ -203,8 +182,7 @@
         if (/^[✿\s]+$/.test(text) || /^\*\s*\*\s*\*/.test(text) ||
             /^-\s*-\s*-/.test(text) || /^[=~]{3,}$/.test(text) ||
             /^[·•◆◇★☆♦♠♣♥❀❁❃✾❊❋※]{3,}$/.test(text.replace(/\s/g, ''))) {
-          const target = isTrueEnding ? trueEnding : mainStory;
-          target.push({ type: 'scene-break', text: '✿ ✿ ✿' });
+          paragraphs.push({ type: 'scene-break', text: '✿ ✿ ✿' });
           return;
         }
 
@@ -221,19 +199,15 @@
           type = 'dialogue';
         } else if (isCentered && isItalic) {
           type = 'last-line';
-        } else if (!isTrueEnding && isFirstParagraph) {
+        } else if (isFirstParagraph) {
           type = 'drop-cap';
           isFirstParagraph = false;
-        } else if (isTrueEnding && isFirstTrueEndingParagraph) {
-          type = 'drop-cap';
-          isFirstTrueEndingParagraph = false;
         }
 
-        const target = isTrueEnding ? trueEnding : mainStory;
-        target.push({ type, text });
+        paragraphs.push({ type, text });
       });
 
-      return { title, subtitle, author, genre, mainStory, trueEnding };
+      return { title, subtitle, author, genre, paragraphs };
     }
 
     /* ==========================================
@@ -289,7 +263,7 @@
     }
 
     /* ==========================================
-       TRUE ENDING — Modal & Navigation
+       TRUE ENDING — Load from separate file
        ========================================== */
     function showModal() {
       modalOverlay.classList.add('active');
@@ -301,27 +275,53 @@
       document.body.style.overflow = '';
     }
 
-    function goToTrueEnding() {
+    async function goToTrueEnding() {
       hideModal();
-      trueEndingSection.style.display = 'block';
 
-      // Small delay for DOM render, then scroll
-      setTimeout(() => {
-        trueEndingSection.scrollIntoView({ behavior: 'smooth' });
+      try {
+        // Tampilkan loading di dalam true ending section
+        trueEndingContent.innerHTML = '<p class="loading-text">Loading true ending...</p>';
+        trueEndingSection.style.display = 'block';
+        // Sembunyikan story section dan footer agar fokus
+        storySection.style.display = 'none';
+        footer.style.display = 'none';
 
-        // Setup paragraph reveal for true ending content
-        const paragraphs = trueEndingContent.querySelectorAll('p');
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('visible');
-              observer.unobserve(entry.target);
-            }
-          });
-        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        const response = await fetch(TRUE_ENDING_FILE);
+        if (!response.ok) throw new Error('File true-ending.htm tidak ditemukan');
 
-        paragraphs.forEach(p => observer.observe(p));
-      }, 100);
+        const html = await response.text();
+        const parsed = parseWordHTML(html); // Gunakan parser yang sama
+
+        if (!parsed.paragraphs.length) {
+          trueEndingContent.innerHTML = '<p class="error-message" style="text-align:center;">Tidak ada konten true ending.</p>';
+          return;
+        }
+
+        // Render ke true ending content
+        renderStory(parsed.paragraphs, trueEndingContent);
+
+        // Scroll ke section true ending
+        setTimeout(() => {
+          trueEndingSection.scrollIntoView({ behavior: 'smooth' });
+
+          // Setup paragraph reveal untuk true ending
+          const paragraphs = trueEndingContent.querySelectorAll('p');
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+          paragraphs.forEach(p => observer.observe(p));
+        }, 100);
+
+      } catch (err) {
+        console.error(err);
+        trueEndingContent.innerHTML = `<p class="error-message" style="text-align:center;">Gagal memuat true ending: ${err.message}</p>`;
+      }
     }
 
     /* ==========================================
@@ -475,7 +475,7 @@
       // True Ending button → show modal
       trueEndingBtn.addEventListener('click', showModal);
 
-      // Modal Yes → go to true ending
+      // Modal Yes → load true ending
       modalYes.addEventListener('click', goToTrueEnding);
 
       // Modal No → close modal
