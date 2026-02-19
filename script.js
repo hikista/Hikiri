@@ -1,16 +1,21 @@
 /* ============================================
-   SAKURA NO YAKUSOKU — SCRIPT (Improved)
+   SAKURA NO YAKUSOKU — SCRIPT
+   Loads novel from external .htm file
+   Author: Hiki
    ============================================ */
 
 (function () {
   if (window.__novelAppInit) return;
   window.__novelAppInit = true;
 
+  /* ==========================================
+     CONFIGURATION — Change this to your file!
+     ========================================== */
   const NOVEL_FILE = 'novel.htm';
 
   document.addEventListener('DOMContentLoaded', () => {
 
-    // === DOM Elements (sama seperti sebelumnya) ===
+    // === DOM Elements ===
     const progressBar = document.getElementById('progressBar');
     const sakuraContainer = document.getElementById('sakuraContainer');
     const floatingControls = document.getElementById('floatingControls');
@@ -28,9 +33,13 @@
     const storyContent = document.getElementById('storyContent');
     const storySection = document.getElementById('storySection');
     const loadingSection = document.getElementById('loadingSection');
-    const errorSection = document.getElementById('errorSection');
-    const errorMessage = document.getElementById('errorMessage');
-    const loadingFileName = document.getElementById('loadingFileName');
+    const trueEndingBtn = document.getElementById('trueEndingBtn');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalYes = document.getElementById('modalYes');
+    const modalNo = document.getElementById('modalNo');
+    const trueEndingSection = document.getElementById('trueEndingSection');
+    const trueEndingContent = document.getElementById('trueEndingContent');
+    const endingBanner = document.getElementById('endingBanner');
 
     // === State ===
     let currentFontSize = parseInt(localStorage.getItem('novelFontSize')) || 18;
@@ -45,7 +54,6 @@
     applyFontSize(currentFontSize);
     createSakuraPetals();
     bindEvents();
-    loadingFileName.textContent = NOVEL_FILE;
 
     // Load the novel!
     loadNovel();
@@ -55,62 +63,65 @@
        ========================================== */
     async function loadNovel() {
       try {
-        console.log('Fetching novel file:', NOVEL_FILE);
         const response = await fetch(NOVEL_FILE);
-        if (!response.ok) throw new Error(`File "${NOVEL_FILE}" tidak ditemukan (${response.status})`);
+        if (!response.ok) throw new Error('File not found');
 
         const html = await response.text();
-        console.log('File loaded, length:', html.length);
-
         const parsed = parseWordHTML(html);
-        console.log('Parsed paragraphs:', parsed.paragraphs.length);
 
-        if (!parsed.paragraphs.length) {
-          // Fallback: tampilkan cuplikan HTML mentah untuk debugging
-          throw new Error('Tidak ada konten yang bisa dibaca. Coba periksa file novel.htm.');
+        // Update hero with extracted metadata
+        if (parsed.title) {
+          document.getElementById('heroTitle').textContent = parsed.title;
+          document.title = parsed.title + ' — by Hiki';
+        }
+        if (parsed.subtitle) {
+          document.getElementById('heroSubtitle').textContent = parsed.subtitle;
+        }
+        if (parsed.author) {
+          document.getElementById('heroAuthor').textContent = parsed.author;
+        }
+        if (parsed.genre) {
+          document.getElementById('statGenre').textContent = '🌸 ' + parsed.genre;
         }
 
-        // Update metadata
-        if (parsed.title) document.getElementById('heroTitle').textContent = parsed.title;
-        if (parsed.subtitle) document.getElementById('heroSubtitle').textContent = parsed.subtitle;
-        if (parsed.author) document.getElementById('heroAuthor').textContent = parsed.author;
-        if (parsed.genre) document.getElementById('statGenre').textContent = '🌸 ' + parsed.genre;
+        // Render main story
+        renderStory(parsed.mainStory, storyContent);
 
-        // Render story
-        renderStory(parsed.paragraphs);
+        // Render true ending if it exists
+        if (parsed.trueEnding.length > 0) {
+          renderStory(parsed.trueEnding, trueEndingContent);
+          endingBanner.style.display = 'block';
+        } else {
+          endingBanner.style.display = 'none';
+        }
 
-        // Hitung statistik
-        const allText = parsed.paragraphs.map(p => p.text).join(' ');
+        // Calculate stats (main story only)
+        const allText = parsed.mainStory.map(p => p.text).join(' ');
         const wordCount = allText.split(/\s+/).filter(w => w.length > 0).length;
         const readingTime = Math.max(1, Math.ceil(wordCount / 200));
-        document.getElementById('statWords').textContent = `📖 ~${readingTime} min baca · ${wordCount.toLocaleString()} kata`;
+        document.getElementById('statWords').textContent =
+          `📖 ~${readingTime} min read · ${wordCount.toLocaleString()} words`;
 
+        // Show story, hide loading
         loadingSection.style.display = 'none';
         storySection.style.display = 'block';
 
+        // Setup paragraph reveal
         setupParagraphReveal();
 
       } catch (err) {
-        console.error('Gagal memuat novel:', err);
+        console.error('Failed to load novel:', err);
+        // Just hide loading and show story section with a simple message
         loadingSection.style.display = 'none';
-        errorSection.style.display = 'flex';
-        errorMessage.textContent = err.message;
-
-        // Tampilkan petunjuk tambahan jika file mungkin ada tapi kosong
-        if (err.message.includes('Tidak ada konten')) {
-          const help = document.createElement('div');
-          help.style.marginTop = '1rem';
-          help.style.fontSize = '0.9rem';
-          help.style.background = 'rgba(255,0,0,0.1)';
-          help.style.padding = '1rem';
-          help.innerHTML = '<strong>Debug:</strong> File ditemukan tetapi tidak mengandung paragraf. Pastikan file disimpan dengan benar sebagai "Web Page (.htm)" dan berisi teks.';
-          errorSection.querySelector('.error-help').appendChild(help);
-        }
+        storySection.style.display = 'block';
+        storyContent.innerHTML = '<p class="visible" style="text-align:center;color:var(--text-muted);font-style:italic;">Place your novel.htm file in the same folder to begin reading.</p>';
+        endingBanner.style.display = 'none';
       }
     }
 
     /* ==========================================
-       PARSE WORD HTML - Versi lebih toleran
+       PARSE WORD HTML
+       Splits into main story + true ending
        ========================================== */
     function parseWordHTML(html) {
       const parser = new DOMParser();
@@ -120,136 +131,201 @@
       let subtitle = '';
       let author = '';
       let genre = '';
-      const paragraphs = [];
+      const mainStory = [];
+      const trueEnding = [];
+      let isTrueEnding = false;
+      let isFirstParagraph = true;
+      let isFirstTrueEndingParagraph = true;
 
-      // Coba ambil dari <title>
-      const docTitle = doc.querySelector('title');
-      if (docTitle && docTitle.textContent.trim()) {
-        title = cleanText(docTitle.textContent);
+      // --- Extract Title ---
+      const titleEl = doc.querySelector('.MsoTitle, h1');
+      if (titleEl) {
+        title = cleanText(titleEl.textContent);
+      } else {
+        const docTitle = doc.querySelector('title');
+        if (docTitle && docTitle.textContent.trim()) {
+          title = cleanText(docTitle.textContent);
+        }
       }
 
-      // Cari semua elemen yang mungkin berisi teks: p, div, h1-h6, span (jika dalam body)
-      const body = doc.body;
-      if (!body) return { title, subtitle, author, genre, paragraphs };
+      // --- Extract Subtitle ---
+      const subtitleEl = doc.querySelector('.MsoSubtitle, h2');
+      if (subtitleEl) {
+        subtitle = cleanText(subtitleEl.textContent);
+      }
 
-      // Ambil semua elemen yang biasanya menampung teks
-      const elements = body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, div, span');
-      let isFirstParagraph = true;
+      // --- Extract all paragraphs ---
+      const allElements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
 
-      elements.forEach(el => {
-        let text = cleanText(el.textContent);
-        if (!text) return;
+      allElements.forEach(el => {
+        const text = cleanText(el.textContent);
 
-        // Skip elemen yang hanya berisi spasi atau kosong
-        if (text.length < 1) return;
+        // Skip empty
+        if (!text || text === '\u00a0' || text.length < 2) return;
 
-        // Coba deteksi judul dari elemen dengan class tertentu
-        if (!title && (el.classList.contains('MsoTitle') || el.tagName === 'H1')) {
-          title = text;
-          return;
-        }
+        // Skip title and subtitle already extracted
+        if (text === title || text === subtitle) return;
 
-        // Deteksi subtitle
-        if (!subtitle && (el.classList.contains('MsoSubtitle') || el.tagName === 'H2')) {
-          subtitle = text;
-          return;
-        }
-
-        // Deteksi author
+        // Extract author
         const authorMatch = text.match(/^(?:Author|Writer|By|Penulis|Pengarang)\s*[:\-–—]\s*(.+)/i);
         if (authorMatch && !author) {
           author = authorMatch[1].trim();
           return;
         }
 
-        // Deteksi genre
+        // Extract genre
         const genreMatch = text.match(/^(?:Genre|Kategori)\s*[:\-–—]\s*(.+)/i);
         if (genreMatch && !genre) {
           genre = genreMatch[1].trim();
           return;
         }
 
-        // Deteksi scene break
-        const sceneBreakRegex = /^[✿\*\-=~·•◆◇★☆♦♠♣♥❀❁❃✾✿❊❋※。・\s]{3,}$/;
-        if (sceneBreakRegex.test(text.replace(/\s/g, '')) && text.length <= 20) {
-          paragraphs.push({ type: 'scene-break', text: '✿ ✿ ✿' });
+        // Detect TRUE ENDING marker
+        if (/true\s*ending/i.test(text) && (
+          el.tagName.match(/^H[1-6]$/) ||
+          text.length < 40
+        )) {
+          isTrueEnding = true;
           return;
         }
 
-        // Deteksi "The End"
-        if (/^[\—\-–]+\s*(The End|Tamat|Fin|End|Selesai|おわり|終)\s*[\—\-–]+$/i.test(text)) {
-          paragraphs.push({ type: 'story-end', text: text });
+        // Detect "The End" marker (for main story end)
+        if (/^[\—\-–—\s]*(The End|Tamat|Fin|End|Selesai|おわり|終)[\—\-–—\s]*$/i.test(text)) {
+          if (!isTrueEnding) {
+            mainStory.push({ type: 'story-end', text: text });
+          } else {
+            trueEnding.push({ type: 'story-end', text: text });
+          }
           return;
         }
 
-        // Tentukan tipe paragraf
-        let type = 'normal';
-        if (isFirstParagraph) {
-          type = 'drop-cap';
-          isFirstParagraph = false;
+        // Detect scene breaks
+        if (/^[✿\s]+$/.test(text) || /^\*\s*\*\s*\*/.test(text) ||
+            /^-\s*-\s*-/.test(text) || /^[=~]{3,}$/.test(text) ||
+            /^[·•◆◇★☆♦♠♣♥❀❁❃✾❊❋※]{3,}$/.test(text.replace(/\s/g, ''))) {
+          const target = isTrueEnding ? trueEnding : mainStory;
+          target.push({ type: 'scene-break', text: '✿ ✿ ✿' });
+          return;
         }
 
-        // Cek apakah teks miring dan terpusat (gunakan gaya atau tag)
+        // Check paragraph style
         const style = el.getAttribute('style') || '';
         const isCentered = style.includes('text-align:center') || style.includes('text-align: center');
-        const hasItalicTag = el.querySelector('i, em') !== null;
-        const isItalic = hasItalicTag || style.includes('font-style:italic') || style.includes('font-style: italic');
+        const isItalic = el.querySelector('i, em, .MsoIntenseEmphasis') !== null ||
+          style.includes('font-style:italic') || style.includes('font-style: italic');
 
-        if (isCentered && isItalic) {
-          type = 'last-line';
-        } else if (isCentered && (isItalic || text.startsWith('"') || text.startsWith('"'))) {
+        // Determine type
+        let type = 'normal';
+
+        if (isCentered && (isItalic || text.startsWith('"') || text.startsWith('\u201C'))) {
           type = 'dialogue';
+        } else if (isCentered && isItalic) {
+          type = 'last-line';
+        } else if (!isTrueEnding && isFirstParagraph) {
+          type = 'drop-cap';
+          isFirstParagraph = false;
+        } else if (isTrueEnding && isFirstTrueEndingParagraph) {
+          type = 'drop-cap';
+          isFirstTrueEndingParagraph = false;
         }
 
-        paragraphs.push({ type, text });
+        const target = isTrueEnding ? trueEnding : mainStory;
+        target.push({ type, text });
       });
 
-      // Jika tidak ada paragraf sama sekali, coba ambil semua teks langsung dari body
-      if (paragraphs.length === 0) {
-        const bodyText = cleanText(body.textContent);
-        if (bodyText) {
-          // Pisahkan berdasarkan baris baru (fallback sederhana)
-          const lines = bodyText.split(/\n+/).filter(l => l.trim().length > 0);
-          lines.forEach((line, idx) => {
-            paragraphs.push({
-              type: idx === 0 ? 'drop-cap' : 'normal',
-              text: line
-            });
-          });
-        }
-      }
-
-      return { title, subtitle, author, genre, paragraphs };
+      return { title, subtitle, author, genre, mainStory, trueEnding };
     }
 
     /* ==========================================
-       CLEAN TEXT - Lebih aman
+       CLEAN TEXT FROM WORD ARTIFACTS
        ========================================== */
     function cleanText(text) {
-      if (!text) return '';
       return text
-        .replace(/<[^>]*>/g, '')           // Hapus tag HTML (untuk jaga-jaga)
-        .replace(/\u00a0/g, ' ')            // &nbsp;
-        .replace(/\s+/g, ' ')               // Gabungkan spasi
+        .replace(/<o:p>[\s\S]*?<\/o:p>/gi, '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\r\n|\r/g, '\n')
+        .replace(/\n+/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
     }
 
     /* ==========================================
-       RENDER STORY
+       RENDER STORY INTO DOM
        ========================================== */
-    function renderStory(paragraphs) {
-      storyContent.innerHTML = '';
+    function renderStory(paragraphs, container) {
+      container.innerHTML = '';
 
       paragraphs.forEach((para) => {
         const p = document.createElement('p');
-        p.textContent = para.text;
-        if (para.type) p.classList.add(para.type);
-        storyContent.appendChild(p);
+
+        switch (para.type) {
+          case 'drop-cap':
+            p.className = 'drop-cap';
+            p.textContent = para.text;
+            break;
+          case 'dialogue':
+            p.className = 'dialogue';
+            p.textContent = para.text;
+            break;
+          case 'scene-break':
+            p.className = 'scene-break';
+            p.textContent = para.text;
+            break;
+          case 'last-line':
+            p.className = 'last-line';
+            p.textContent = para.text;
+            break;
+          case 'story-end':
+            p.className = 'story-end';
+            p.textContent = para.text;
+            break;
+          default:
+            p.textContent = para.text;
+            break;
+        }
+
+        container.appendChild(p);
       });
     }
 
     /* ==========================================
-       FUNGSI LAINNYA (sama seperti sebelumnya)
+       TRUE ENDING — Modal & Navigation
+       ========================================== */
+    function showModal() {
+      modalOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function hideModal() {
+      modalOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function goToTrueEnding() {
+      hideModal();
+      trueEndingSection.style.display = 'block';
+
+      // Small delay for DOM render, then scroll
+      setTimeout(() => {
+        trueEndingSection.scrollIntoView({ behavior: 'smooth' });
+
+        // Setup paragraph reveal for true ending content
+        const paragraphs = trueEndingContent.querySelectorAll('p');
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        paragraphs.forEach(p => observer.observe(p));
+      }, 100);
+    }
+
+    /* ==========================================
+       THEME TOGGLE
        ========================================== */
     function toggleTheme() {
       currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -257,6 +333,9 @@
       localStorage.setItem('novelTheme', currentTheme);
     }
 
+    /* ==========================================
+       FONT SIZE
+       ========================================== */
     function applyFontSize(size) {
       size = Math.max(14, Math.min(28, size));
       currentFontSize = size;
@@ -266,12 +345,18 @@
       localStorage.setItem('novelFontSize', size);
     }
 
+    /* ==========================================
+       FOCUS MODE
+       ========================================== */
     function toggleFocusMode() {
       focusModeOn = !focusModeOn;
       document.body.classList.toggle('focus-mode', focusModeOn);
       focusBtn.textContent = focusModeOn ? '👁️‍🗨️' : '👁️';
     }
 
+    /* ==========================================
+       SAKURA PETALS
+       ========================================== */
     function createSakuraPetals() {
       const count = window.innerWidth < 768 ? 10 : 20;
       for (let i = 0; i < count; i++) {
@@ -304,6 +389,9 @@
       setTimeout(() => { if (petal.parentNode) petal.remove(); }, (duration + delay) * 1000);
     }
 
+    /* ==========================================
+       PARAGRAPH REVEAL ON SCROLL
+       ========================================== */
     function setupParagraphReveal() {
       const paragraphs = storyContent.querySelectorAll('p');
       const observer = new IntersectionObserver((entries) => {
@@ -318,6 +406,9 @@
       paragraphs.forEach(p => observer.observe(p));
     }
 
+    /* ==========================================
+       SCROLL HANDLING
+       ========================================== */
     function handleScroll() {
       const scrollTop = window.scrollY;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -353,32 +444,60 @@
       lastScrollY = scrollTop;
     }
 
+    /* ==========================================
+       BIND EVENTS
+       ========================================== */
     function bindEvents() {
       themeToggle.addEventListener('click', toggleTheme);
+
       fontSizeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         fontPanel.classList.toggle('visible');
       });
+
       fontDecrease.addEventListener('click', () => applyFontSize(currentFontSize - 1));
       fontIncrease.addEventListener('click', () => applyFontSize(currentFontSize + 1));
       fontSlider.addEventListener('input', (e) => applyFontSize(parseInt(e.target.value)));
+
       focusBtn.addEventListener('click', toggleFocusMode);
+
       window.addEventListener('scroll', handleScroll, { passive: true });
+
       startReading.addEventListener('click', () => {
         const target = storySection.style.display !== 'none' ? storySection : loadingSection;
         target.scrollIntoView({ behavior: 'smooth' });
       });
+
       backToTop.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
+
+      // True Ending button → show modal
+      trueEndingBtn.addEventListener('click', showModal);
+
+      // Modal Yes → go to true ending
+      modalYes.addEventListener('click', goToTrueEnding);
+
+      // Modal No → close modal
+      modalNo.addEventListener('click', hideModal);
+
+      // Click outside modal box to close
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) hideModal();
+      });
+
+      // Close font panel on outside click
       document.addEventListener('click', (e) => {
         if (!fontPanel.contains(e.target) && e.target !== fontSizeBtn) {
           fontPanel.classList.remove('visible');
         }
       });
+
+      // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           fontPanel.classList.remove('visible');
+          if (modalOverlay.classList.contains('active')) hideModal();
           if (focusModeOn) toggleFocusMode();
         }
         if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
@@ -392,6 +511,7 @@
       });
     }
 
+    // Initial scroll check
     handleScroll();
 
   });
