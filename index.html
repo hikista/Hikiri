@@ -106,7 +106,27 @@
       <div class="spinner-petal"></div>
       <div class="spinner-petal"></div>
     </div>
-    <p class="loading-text">Loading story...</p>
+    <p class="loading-text">Loading story from <span id="loadingFileName">novel.htm</span>...</p>
+  </section>
+
+  <!-- ====== ERROR STATE ====== -->
+  <section class="error-section" id="errorSection" style="display:none;">
+    <div class="error-icon">🌸</div>
+    <h2 class="error-title">Could not load the story</h2>
+    <p class="error-message" id="errorMessage"></p>
+    <div class="error-help">
+      <p><strong>How to use:</strong></p>
+      <ol>
+        <li>Open your novel in Microsoft Word</li>
+        <li>File → Save As → Web Page (.htm)</li>
+        <li>Name it <code>novel.htm</code></li>
+        <li>Place it in the same folder as this website</li>
+        <li>Refresh this page</li>
+      </ol>
+    </div>
+    <button class="start-reading-btn" onclick="location.reload()">
+      <span>Try Again</span>
+    </button>
   </section>
 
   <!-- ====== STORY SECTION ====== -->
@@ -129,7 +149,7 @@
     <div class="ending-banner" id="endingBanner">
       <div class="ending-ornament">🌸</div>
       <p class="ending-note">
-        Ending dari cerita ini <strong>tidak Cannon</strong>. Jika kamu tidak puas dengan ending cerita yang ini, silahkan baca <em>True Ending</em> dari cerita ini.
+        Ending dari cerita ini <strong>tidak Canon</strong>. Jika kamu tidak puas dengan ending cerita yang ini, silahkan baca <em>True Ending</em> dari cerita ini.
       </p>
       <button class="true-ending-btn" id="trueEndingBtn">
         <span class="btn-sparkle">✦</span>
@@ -159,7 +179,7 @@
     </div>
 
     <article class="story-content" id="trueEndingContent">
-      <!-- True ending loaded from novel.htm -->
+      <!-- True ending loaded from novel.htm (or separate file) -->
     </article>
 
     <div class="true-ending-final">
@@ -205,6 +225,6 @@
   </footer>
 
   <script src="script.js"></script>
-  <script type="module" src="/src/main.tsx"></script>
+  <!-- Removed main.tsx as it's not needed -->
 </body>
 </html>
